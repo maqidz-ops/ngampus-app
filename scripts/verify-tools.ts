@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { PDFDocument } from "pdf-lib";
-import { mergePdfs } from "../src/lib/pdf/merge.ts";
-import { convertToPdf } from "../src/lib/pdf/convert.ts";
-import { compressPdf } from "../src/lib/pdf/compress.ts";
+import { mergePdfs } from "../src/lib/pdf/merge";
+import { convertToPdf } from "../src/lib/pdf/convert";
+import { compressPdf } from "../src/lib/pdf/compress";
 
 async function main() {
   const a = new File([readFileSync("public/fixtures/a.pdf")], "a.pdf", {
