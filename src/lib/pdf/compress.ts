@@ -64,7 +64,7 @@ export async function compressPdf(
     if (!ctx) throw new Error("Canvas tidak tersedia di browser ini.");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    await page.render({ canvasContext: ctx, viewport, canvas: null }).promise;
     const jpeg = await canvasToJpeg(canvas, preset.quality);
     const img = await out.embedJpg(jpeg);
     const p = out.addPage([img.width, img.height]);
