@@ -49,7 +49,7 @@ export function CompressTool() {
         multiple={false}
         files={files}
         onChange={setFiles}
-        hint="Satu PDF. Mode sedang/kuat meraster halaman (teks jadi gambar)."
+        hint="Satu PDF. Sedang sekitar 50% lebih kecil, kuat sekitar 75%."
       />
       <fieldset className="mt-5">
         <legend className="text-sm font-medium">Tingkat kompresi</legend>
@@ -71,9 +71,7 @@ export function CompressTool() {
               <span className="block font-medium text-foreground">
                 {COMPRESS_PRESETS[key].label}
               </span>
-              <span className="text-xs">
-                {key === "light" ? "tanpa raster" : `JPEG ${Math.round(COMPRESS_PRESETS[key].quality * 100)}%`}
-              </span>
+              <span className="text-xs">{COMPRESS_PRESETS[key].detail}</span>
             </label>
           ))}
         </div>

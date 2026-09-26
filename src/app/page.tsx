@@ -11,7 +11,7 @@ const tools = [
   {
     href: "/tools/compress",
     title: "Kompres PDF",
-    body: "Perkecil ukuran PDF di browser. Pilih ringan, sedang, atau kuat.",
+    body: "Perkecil ukuran PDF di browser. Ringan, sedang (~50%), atau kuat (~75%).",
   },
   {
     href: "/tools/convert",
