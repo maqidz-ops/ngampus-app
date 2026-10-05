@@ -1,10 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import type { PDFPageProxy } from "pdfjs-dist";
 
-export type CompressLevel = "light" | "medium" | "strong";
-
-type RasterLevel = "medium" | "strong";
-
 type RasterAttempt = {
   longEdge: number;
   quality: number;
@@ -16,49 +12,25 @@ type RasterAttempt = {
  * the new JPEG barely shrinks. Attempts go from sharpest to smallest. A short
  * quality search then picks the largest JPEG that still fits the target ratio.
  */
-const RASTER: Record<
-  RasterLevel,
-  { targetRatio: number; maxScale: number; minQuality: number; attempts: RasterAttempt[] }
-> = {
-  medium: {
-    targetRatio: 0.5,
-    maxScale: 3,
-    minQuality: 0.4,
-    attempts: [
-      { longEdge: 2400, quality: 0.86 },
-      { longEdge: 2400, quality: 0.74 },
-      { longEdge: 2400, quality: 0.62 },
-      { longEdge: 1900, quality: 0.68 },
-      { longEdge: 1600, quality: 0.56 },
-      { longEdge: 1300, quality: 0.46 },
-      { longEdge: 1100, quality: 0.4 },
-    ],
-  },
-  strong: {
-    targetRatio: 0.25,
-    maxScale: 2.4,
-    minQuality: 0.3,
-    attempts: [
-      { longEdge: 1900, quality: 0.74 },
-      { longEdge: 1900, quality: 0.62 },
-      { longEdge: 1900, quality: 0.5 },
-      { longEdge: 1500, quality: 0.55 },
-      { longEdge: 1250, quality: 0.44 },
-      { longEdge: 1050, quality: 0.36 },
-      { longEdge: 860, quality: 0.3 },
-    ],
-  },
+const RASTER = {
+  targetRatio: 0.575,
+  maxScale: 3,
+  minQuality: 0.4,
+  attempts: [
+    { longEdge: 2400, quality: 0.86 },
+    { longEdge: 2400, quality: 0.74 },
+    { longEdge: 2400, quality: 0.62 },
+    { longEdge: 1900, quality: 0.68 },
+    { longEdge: 1600, quality: 0.56 },
+    { longEdge: 1300, quality: 0.46 },
+    { longEdge: 1100, quality: 0.4 },
+  ],
 };
 
-const TARGET_SLACK = 1.08;
+// Aim for 42.5% savings, allowing outputs up to 65% of the original size.
+const TARGET_SLACK = 0.65 / RASTER.targetRatio;
 const MAX_FULL_PASSES = 3;
 const SEARCH_STEPS = 3;
-
-export const COMPRESS_PRESETS: Record<CompressLevel, { label: string; detail: string }> = {
-  light: { label: "Ringan", detail: "tanpa raster" },
-  medium: { label: "Sedang", detail: "~50% lebih kecil" },
-  strong: { label: "Kuat", detail: "~75% lebih kecil" },
-};
 
 async function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Uint8Array> {
   const blob = await new Promise<Blob>((resolve, reject) => {
@@ -195,10 +167,9 @@ async function searchQuality(
 async function chooseAttempt(
   page: PDFPageProxy,
   pageCount: number,
-  originalSize: number,
-  level: RasterLevel
+  originalSize: number
 ) {
-  const plan = RASTER[level];
+  const plan = RASTER;
   const target = Math.max(1, Math.floor(originalSize * plan.targetRatio));
   const budget = Math.floor(target * TARGET_SLACK);
   const box = pageBox(page);
@@ -252,14 +223,13 @@ async function chooseAttempt(
 
 async function rasterize(
   pdf: { numPages: number; getPage: (n: number) => Promise<PDFPageProxy> },
-  level: RasterLevel,
   attempt: RasterAttempt,
   fileName: string,
   originalSize: number,
   stopAtBudget: boolean,
   onProgress?: (done: number, total: number) => void
 ): Promise<Uint8Array | null> {
-  const plan = RASTER[level];
+  const plan = RASTER;
   const budget = Math.floor(originalSize * plan.targetRatio * TARGET_SLACK);
   const out = await PDFDocument.create();
   out.setTitle(fileName.replace(/\.pdf$/i, "") + " (kompres)");
@@ -289,7 +259,6 @@ async function rasterize(
 async function rasterCompress(
   data: Uint8Array,
   fileName: string,
-  level: RasterLevel,
   onProgress?: (done: number, total: number) => void
 ): Promise<Uint8Array | null> {
   const pdfjs = await loadPdfjs();
@@ -298,10 +267,10 @@ async function rasterCompress(
   try {
     const pdf = await loading.promise;
     if (pdf.numPages < 1) return null;
-    const plan = RASTER[level];
+    const plan = RASTER;
     const budget = Math.floor(data.byteLength * plan.targetRatio * TARGET_SLACK);
     const first = await pdf.getPage(1);
-    const choice = await chooseAttempt(first, pdf.numPages, data.byteLength, level);
+    const choice = await chooseAttempt(first, pdf.numPages, data.byteLength);
     if (choice.hopeless) {
       onProgress?.(1, 1);
       return null;
@@ -314,7 +283,6 @@ async function rasterCompress(
       const stopAtBudget = pass < passes - 1;
       const bytes = await rasterize(
         pdf,
-        level,
         queue[pass],
         fileName,
         data.byteLength,
@@ -338,18 +306,11 @@ function smaller(a: Uint8Array, b: Uint8Array) {
 
 export async function compressPdf(
   file: File,
-  level: CompressLevel,
   onProgress?: (done: number, total: number) => void
 ): Promise<Uint8Array> {
   const data = new Uint8Array(await file.arrayBuffer());
 
-  if (level === "light") {
-    onProgress?.(1, 1);
-    const light = await rewritePdf(data, file.name);
-    return smaller(light, data);
-  }
-
-  const raster = await rasterCompress(data, file.name, level, onProgress);
+  const raster = await rasterCompress(data, file.name, onProgress);
   if (raster && raster.byteLength < data.byteLength) return raster;
 
   const light = await rewritePdf(data, file.name);

@@ -26,7 +26,7 @@ Buka http://localhost:3000
 | `npx tsx scripts/verify-tools.ts` | Cek gabung, konversi, dan kompres di Node |
 | `node scripts/verify-merge.mjs` | Cek gabung sederhana; hasilnya di `.tmp-verify/` |
 
-`verify-tools.ts` memakai canvas lewat `@napi-rs/canvas` (ikut terpasang bersama `pdfjs-dist`). Kalau paket itu tidak ada, skrip kompres sedang/kuat tidak bisa jalan.
+`verify-tools.ts` memakai canvas lewat `@napi-rs/canvas` (ikut terpasang bersama `pdfjs-dist`). Kalau paket itu tidak ada, skrip kompres tidak bisa jalan.
 
 ## Halaman
 
@@ -34,19 +34,15 @@ Buka http://localhost:3000
 |---|---|
 | `/` | Beranda: tiga alat PDF, plus ajakan cek plagiasi |
 | `/tools/merge` | Gabung beberapa PDF jadi satu. Urutan di daftar = urutan halaman; geser dengan tombol panah |
-| `/tools/compress` | Perkecil satu PDF. Tingkatnya dijelaskan di bawah |
+| `/tools/compress` | Perkecil satu PDF. Kompres otomatis dengan target pengurangan 35–50% |
 | `/tools/convert` | Gambar, teks, HTML, dan DOCX dijadikan satu PDF |
 | `/services/plagiarism` | Info layanan cek plagiasi (Rp 5.000). Pemesanan, pembayaran, dan laporan lewat WhatsApp belum hidup di build ini |
 
 ## Kompres PDF
 
-Satu file. Ada tiga tingkat:
+Satu file, satu mode otomatis dengan target ukuran **35–50% lebih kecil**. Kualitas JPEG dan resolusi disesuaikan otomatis. Halaman digambar ulang menjadi gambar sehingga teks hasil kompres tidak bisa diseleksi.
 
-- **Ringan** — menulis ulang PDF, nyaris tanpa menurunkan kualitas. Teks tetap bisa diseleksi. Ukurannya biasanya hanya turun sedikit.
-- **Sedang** — target sekitar **50% lebih kecil** (hasil kira-kira setengah file asli). Halaman digambar ulang menjadi JPEG.
-- **Kuat** — target sekitar **75% lebih kecil** (hasil kira-kira seperempat file asli). Lebih ringan; teks jadi gambar, jadi tidak bisa diseleksi.
-
-Kalau menggambar ulang halaman malah membuat file lebih besar, hasil itu dibuang. PDFKilat tidak mengembalikan file yang lebih besar dari aslinya: yang dipakai adalah hasil ringan, atau file asli kalau itu yang lebih kecil. PDF yang isinya teks saja sering hampir tidak menyusut.
+Target bukan jaminan: hasil bergantung pada isi PDF dan bisa berada di luar rentang tersebut. Jika rasterisasi membuat file lebih besar, aplikasi mencoba menulis ulang PDF atau menggunakan file asli, mana yang lebih kecil. Hasil tidak lebih besar dari file asli. PDF yang isinya teks saja sering hampir tidak menyusut.
 
 ## Batas
 

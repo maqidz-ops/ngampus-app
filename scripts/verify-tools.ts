@@ -3,7 +3,7 @@ import { createCanvas, DOMMatrix, ImageData, Path2D, type Canvas } from "@napi-r
 import { PDFDocument, StandardFonts, rgb, degrees } from "pdf-lib";
 import { mergePdfs } from "../src/lib/pdf/merge";
 import { convertToPdf } from "../src/lib/pdf/convert";
-import { compressPdf, type CompressLevel } from "../src/lib/pdf/compress";
+import { compressPdf } from "../src/lib/pdf/compress";
 
 function installCanvas() {
   const promiseWithTry = Promise as unknown as {
@@ -176,25 +176,25 @@ function close(a: number, b: number) {
   return Math.abs(a - b) < 1.5;
 }
 
-async function runLevel(bytes: Uint8Array, name: string, level: CompressLevel) {
-  const out = await compressPdf(asFile(bytes, name), level);
+async function runCompression(bytes: Uint8Array, name: string) {
+  const out = await compressPdf(asFile(bytes, name));
   const src = await visualBoxes(bytes);
   const dst = await visualBoxes(out);
   if (dst.length !== src.length) {
-    throw new Error(`${name} ${level} page count ${dst.length} != ${src.length}`);
+    throw new Error(`${name} page count ${dst.length} != ${src.length}`);
   }
   for (let i = 0; i < src.length; i++) {
     if (!close(src[i].width, dst[i].width) || !close(src[i].height, dst[i].height)) {
       throw new Error(
-        `${name} ${level} page ${i + 1} size ${dst[i].width}x${dst[i].height} != ${src[i].width}x${src[i].height}`
+        `${name} page ${i + 1} size ${dst[i].width}x${dst[i].height} != ${src[i].width}x${src[i].height}`
       );
     }
   }
   if (out.byteLength > bytes.byteLength) {
-    throw new Error(`${name} ${level} grew ${bytes.byteLength} -> ${out.byteLength}`);
+    throw new Error(`${name} grew ${bytes.byteLength} -> ${out.byteLength}`);
   }
   const doc = await PDFDocument.load(out);
-  if (doc.getPageCount() !== src.length) throw new Error(`${name} ${level} unreadable`);
+  if (doc.getPageCount() !== src.length) throw new Error(`${name} unreadable`);
   return out.byteLength;
 }
 
@@ -226,11 +226,11 @@ async function main() {
   const fixture = new Uint8Array(readFileSync("public/fixtures/a.pdf"));
 
   const cases = [
-    { name: "photo-a4", bytes: photo, mediumMax: 0.55, strongMax: 0.32 },
-    { name: "scan-points", bytes: scan, mediumMax: 0.55, strongMax: 0.32 },
-    { name: "text", bytes: text, mediumMax: 1, strongMax: 1 },
-    { name: "rotated", bytes: rotated, mediumMax: 0.6, strongMax: 0.4 },
-    { name: "fixture-a", bytes: fixture, mediumMax: 1, strongMax: 1 },
+    { name: "photo-a4", bytes: photo, maxRatio: 0.65 },
+    { name: "scan-points", bytes: scan, maxRatio: 0.65 },
+    { name: "text", bytes: text, maxRatio: 1 },
+    { name: "rotated", bytes: rotated, maxRatio: 0.65 },
+    { name: "fixture-a", bytes: fixture, maxRatio: 1 },
   ];
 
   const report: Record<string, unknown> = {
@@ -240,27 +240,15 @@ async function main() {
   };
 
   for (const item of cases) {
-    const light = await runLevel(item.bytes, item.name, "light");
-    const medium = await runLevel(item.bytes, item.name, "medium");
-    const strong = await runLevel(item.bytes, item.name, "strong");
-    const mediumRatio = medium / item.bytes.byteLength;
-    const strongRatio = strong / item.bytes.byteLength;
-    if (mediumRatio > item.mediumMax) {
-      throw new Error(`${item.name} medium ratio ${mediumRatio.toFixed(3)} > ${item.mediumMax}`);
-    }
-    if (strongRatio > item.strongMax) {
-      throw new Error(`${item.name} strong ratio ${strongRatio.toFixed(3)} > ${item.strongMax}`);
-    }
-    if (item.mediumMax < 1 && strong > medium) {
-      throw new Error(`${item.name} strong ${strong} is not smaller than medium ${medium}`);
+    const compressed = await runCompression(item.bytes, item.name);
+    const ratio = compressed / item.bytes.byteLength;
+    if (ratio > item.maxRatio) {
+      throw new Error(`${item.name} ratio ${ratio.toFixed(3)} > ${item.maxRatio}`);
     }
     report[item.name] = {
       original: item.bytes.byteLength,
-      light,
-      medium,
-      strong,
-      mediumRatio: Number(mediumRatio.toFixed(3)),
-      strongRatio: Number(strongRatio.toFixed(3)),
+      compressed,
+      ratio: Number(ratio.toFixed(3)),
       pages: (await PDFDocument.load(item.bytes)).getPageCount(),
     };
   }

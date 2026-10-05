@@ -4,18 +4,17 @@ import { CompressTool } from "./CompressTool";
 
 export const metadata: Metadata = {
   title: "Kompres PDF",
-  description:
-    "Perkecil ukuran PDF di browser. Ringan menulis ulang file; sedang mengecilkan sekitar 50%, kuat sekitar 75%.",
+  description: "Kompres PDF otomatis di browser dengan target pengurangan ukuran 35–50%, tanpa unggah.",
 };
 
 const faq = [
   {
-    q: "Kenapa mode sedang/kuat membuat teks tidak bisa diseleksi?",
-    a: "Kalau halaman diraster, isinya jadi gambar JPEG supaya ukuran turun. Mode ringan menjaga teks, tapi penghematannya kecil.",
+    q: "Apakah teks hasil kompres tetap bisa diseleksi?",
+    a: "Kompres otomatis menggambar ulang halaman sebagai gambar. Teks pada hasil kompres tidak bisa diseleksi.",
   },
   {
-    q: "Kenapa hasil kadang hampir sama dengan file asli?",
-    a: "PDF yang sudah kecil atau berisi teks vektor bisa membesar kalau dijadikan gambar. Sedang dan kuat tidak mengembalikan file yang lebih besar dari aslinya.",
+    q: "Apakah ukuran selalu berkurang 35–50%?",
+    a: "Itu adalah target, bukan jaminan. Hasil bergantung pada isi PDF dan bisa di luar rentang tersebut. Jika kompres tidak menghasilkan file lebih kecil, file asli digunakan.",
   },
   {
     q: "File keluar dari HP/laptop?",
@@ -28,7 +27,7 @@ export default function CompressPage() {
     <ToolShell
       kicker="Alat PDF"
       title="Kompres PDF"
-      description="Perkecil ukuran PDF tanpa unggah. Sedang sekitar setengah ukuran asli, kuat sekitar seperempat — untuk cetak atau kirim WA."
+      description="Perkecil ukuran PDF secara otomatis tanpa unggah, dengan target pengurangan 35–50%."
       faq={faq}
     >
       <CompressTool />
